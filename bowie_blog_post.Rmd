@@ -1,0 +1,122 @@
+---
+title: "Tidy Text Mining of David Bowie's Lyrics"
+author: "Nic Crane"
+---
+
+After hearing about **tidytext** at the RStudio conference last month, 
+I decided to try it out.  If you want to try out tidy text 
+mining for yourself, check out the official website at <http://tidytextmining.com>.
+
+Legendary performer David Bowie would have been 70 earlier this month, and as a 
+tribute to his impressive career, I decided to take a look at his lyrics.
+
+First, I used the **rvest** package to scrape all the lyrical content from all
+albums on DavidBowie.com.  Only albums from before 2016 which had lyrics present
+on this website and weren't re-releases were included (i.e. the eponymous album 
+of 1969 was omitted as it was re-released under the title "Space Oddity").
+
+```{r, echo = FALSE}
+suppressMessages({
+suppressWarnings({
+  
+library(dplyr)
+library(tidytext)
+library(data.table)
+library(knitr)
+  
+})
+
+load("bowieData.Rda")
+load("bowieLyrics.Rda")
+bowieData <- select(bowieData, Album, Year, BPI)
+})
+
+```
+Let's take a look at the structure of the lyrics dataset.
+```{r}
+str(bowieLyrics)
+```
+
+The dataset contains a character string for each track, with the lyrics
+for the whole song.  It looks good, but it's a bit of a mess, and definitely
+needs more work before we can use it for any kind of analysis.
+
+The first job is to tidy up the dataset.  The `unnest_tokens` function in the 
+tidytext package makes easy work of this for us.
+
+```{r cache = TRUE}
+# tidy data so it has one-token-per-document-per-row format
+unnested <- unnest_tokens(bowieLyrics, word, lyrics)
+kable(head(unnested, 5))
+```
+
+Looking good, although these lyrics are displayed in the order in which they 
+occur.  Let's sort them and take a look at what the most common words are.
+
+```{r}
+# What are the most common words? 
+count(unnested, word, sort=TRUE)
+```
+
+That's great, but not so interesting.  Let's remove words like 'the' and 'and', 
+and take another look. 
+
+```{r}
+data("stop_words")
+unnested <- unnested %>% anti_join(stop_words)
+
+# Cool, let's try again!
+count(unnested, word, sort=TRUE)
+```
+
+OK, this is reminding me a lot more of the Bowie songs that I know and love!
+
+I bet this would look better as a word cloud though...
+
+```{r, message=FALSE}
+library(wordcloud)
+
+# Some interesting results - one of which is the word "ch" as in "ch ch changes"!
+unnested %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 120, colors="purple4"))
+
+```
+
+Finally, let's take a quick look at words used to express sentiments in Bowie's lyrics.
+
+The `get_sentiments` function allows us to retrieve sentiment lexicons.  They're in
+a tidy format so can easily be joined with our tidy text data.
+
+First, we join the datasets and create a word cloud of only the positive words.
+
+```{r, message=FALSE}
+# Sentiment analysis of lyrical content
+bing <- get_sentiments("bing")
+
+byEmotion <- unnested %>%
+  inner_join(bing)
+
+byEmotion %>%
+  filter(sentiment == "positive") %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 50, colors="red"))
+```
+
+By far the most common positive word in David Bowie's lyrics was 'love'.
+
+Now let's take a look at the negative words.
+
+```{r}
+byEmotion %>%
+  filter(sentiment == "negative") %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words = 50, colors="black"))
+```
+
+I think I prefer the first word cloud!
+
+This was just a quick look at the tidytext package, but we're a big fan of how
+easy it is to quickly analyse text data.  Check out <http://tidytextmining.com/> 
+to see what else this package can do!
