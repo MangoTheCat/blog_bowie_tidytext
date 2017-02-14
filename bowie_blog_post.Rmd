@@ -6,8 +6,7 @@ output:
     keep_md: true
 ---
 
-After hearing about **tidytext** at the RStudio conference last month, 
-I decided to try it out.  If you want to try out tidy text 
+After hearing about **tidytext** from colleagues who went to the RStudio conference last month, I decided to try it out.  If you want to try out tidy text 
 mining for yourself, check out the official website at <http://tidytextmining.com>.
 
 Legendary performer David Bowie would have been 70 earlier this month, and as a 
